@@ -8,8 +8,8 @@ import {
   Animated,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { auth } from '../firebase/firebaseConfig';
-import { supabase } from '../supabase/supabaseClient';
+import { auth, db } from '../firebase/firebaseConfig';
+import { collection, addDoc } from 'firebase/firestore';
 
 const COHETES = ['Falcon 1', 'Falcon 9', 'Falcon Heavy', 'Dragon'];
 const PUNTOS_CORRECTO = 10;
@@ -39,7 +39,6 @@ export default function Original() {
 
   const timerRef = useRef(null);
   const escalaAnim = useRef(new Animated.Value(1)).current;
-  const opacidadAnim = useRef(new Animated.Value(1)).current;
 
   const obtenerMision = async () => {
     setLoading(true);
@@ -126,15 +125,17 @@ export default function Original() {
     const usuario = auth.currentUser;
 
     if (usuario) {
-      const { error } = await supabase
-        .from('puntuaciones')
-        .insert({
+      try {
+        await addDoc(collection(db, 'puntuaciones'), {
           uid: usuario.uid,
           email: usuario.email,
           mision: 'SpaceX Quiz',
           puntaje: puntaje,
+          fecha: new Date().toISOString(),
         });
-      if (error) console.log('Error guardando puntaje:', error.message);
+      } catch (e) {
+        console.log('Error guardando en Firebase:', e.message);
+      }
     }
 
     setGuardando(false);
@@ -171,7 +172,7 @@ export default function Original() {
         {guardando ? (
           <ActivityIndicator color="#7eb8f7" style={{ marginTop: 20 }} />
         ) : (
-          <Text style={styles.guardadoText}>✅ Puntaje guardado en Supabase</Text>
+          <Text style={styles.guardadoText}>✅ Puntaje guardado en Firebase</Text>
         )}
         <TouchableOpacity style={styles.botonReiniciar} onPress={reiniciar}>
           <Text style={styles.botonReiniciarText}>Jugar de nuevo</Text>
